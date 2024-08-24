@@ -1,6 +1,8 @@
 from flask import Flask, jsonify
 import random
 
+from opentelemetry import trace
+
 app = Flask(__name__)
 
 PHRASES = [
@@ -22,7 +24,7 @@ PHRASES = [
     "deploy != release",
     "oh, just the crimes",
     "not a bug, it's a feature",
-    "test in prod", 
+    "test in prod",
     "who broke the build?",
 ]
 
@@ -36,6 +38,10 @@ def health():
 def get_phrase():
     phrase = choose(PHRASES)
     # You can implement tracing logic here if needed
+
+    current_span = trace.get_current_span()
+    current_span.set_attribute("phrase", phrase)
+
     return jsonify({"phrase": phrase})
 
 # Helper function to choose a random item from a list

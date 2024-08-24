@@ -5,18 +5,24 @@ from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
 from download import generate_random_filename, download_image
-# from custom_span_processor import CustomSpanProcessor
+
+from opentelemetry.sdk.trace import TracerProvider
+
+from custom_span_processor import CustomSpanProcessor
 
 # Acquire a tracer
+# See https://github.com/open-telemetry/opentelemetry-python/issues/3713
+# noinspection PyUnresolvedReferences
+trace.get_tracer_provider().add_span_processor(CustomSpanProcessor())
 tracer = trace.get_tracer("meminator-tracer")
 
 IMAGE_MAX_WIDTH_PX = 1000
 IMAGE_MAX_HEIGHT_PX = 1000
 
 app = Flask(__name__)
+
+
 # Route for health check
-
-
 @app.route('/health')
 def health():
     result = {"message": "I am here", "status_code": 0}
@@ -60,36 +66,36 @@ def meminate():
                output_image_path]
 
     request_span.add_event("convert_subprocess_start", {
-                           "command": " ".join(command)})
+        "command": " ".join(command)})
 
     # Run the command, gracefully catch any errors
-    try:
-        result = subprocess.run(command, capture_output=True, text=True)
-        request_span.add_event("convert_subprocess_end",
-                               {"command": " ".join(command),
-                                "returncode": result.returncode,
-                                "stdout": result.stdout,
-                                "stderr": result.stderr})
-    except Exception as e:
-        request_span.add_event("convert_subprocess_failed",
-                               {"command": " ".join(command),
-                                "returncode": result.returncode,
-                                "stderr": result.stderr,
-                                "error": e})
-        print("An error occurred:", str(e))
-        request_span.set_status(Status(StatusCode.ERROR))
-        request_span.record_exception(e)
-        return 'An error occurred generating your image, sorry', 500
+    # try:
+    #     result = subprocess.run(command, capture_output=True, text=True)
+    #     request_span.add_event("convert_subprocess_end",
+    #                            {"command": " ".join(command),
+    #                             "returncode": result.returncode,
+    #                             "stdout": result.stdout,
+    #                             "stderr": result.stderr})
+    # except Exception as e:
+    #     request_span.add_event("convert_subprocess_failed",
+    #                            {"command": " ".join(command),
+    #                             "returncode": result.returncode,
+    #                             "stderr": result.stderr,
+    #                             "error": e})
+    #     print("An error occurred:", str(e))
+    #     request_span.set_status(Status(StatusCode.ERROR))
+    #     request_span.record_exception(e)
+    #     return 'An error occurred generating your image, sorry', 500
 
     # Sub-span version
-    # with tracer.start_as_current_span("span-name") as subprocess_span:
-        # subprocess_span.set_attribute("app.subprocess.command", " ".join(command))
-        # result = subprocess.run(command, capture_output=True, text=True)
-        # subprocess_span.set_attribute("app.subprocess.returncode", result.returncode)
-        # subprocess_span.set_attribute("app.subprocess.stdout", result.stdout)
-        # subprocess_span.set_attribute("app.subprocess.stderr", result.stderr)
-        # if result.returncode != 0:
-        #     raise Exception("Subprocess failed with return code:", result.returncode)
+    with tracer.start_as_current_span("image_conversion") as subprocess_span:
+        subprocess_span.set_attribute("app.subprocess.command", " ".join(command))
+        result = subprocess.run(command, capture_output=True, text=True)
+        subprocess_span.set_attribute("app.subprocess.returncode", result.returncode)
+        subprocess_span.set_attribute("app.subprocess.stdout", result.stdout)
+        subprocess_span.set_attribute("app.subprocess.stderr", result.stderr)
+        if result.returncode != 0:
+            raise Exception("Subprocess failed with return code:", result.returncode)
 
     # Serve the modified image
     return send_file(

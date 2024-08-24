@@ -2,6 +2,8 @@ import os
 from flask import Flask, jsonify
 import random
 
+from opentelemetry import trace
+
 app = Flask(__name__)
 
 filenames = [
@@ -72,9 +74,13 @@ def health():
 # Route for getting a random phrase
 @app.route('/imageUrl')
 def get_image_url():
-    phrase = choose(IMAGE_URLS)
+    image_url = choose(IMAGE_URLS)
     # You can implement tracing logic here if needed
-    return jsonify({"imageUrl": phrase})
+
+    current_span = trace.get_current_span()
+    current_span.set_attribute("image_url", image_url)
+
+    return jsonify({"imageUrl": image_url})
 
 # Helper function to choose a random item from a list
 def choose(array):

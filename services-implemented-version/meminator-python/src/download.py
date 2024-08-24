@@ -8,9 +8,7 @@ from opentelemetry.trace import Status, StatusCode
 tracer = trace.get_tracer("meminator-tracer")
 
 # uncomment this decoration to launch a new child span
-# @tracer.start_as_current_span("do_work")
-
-
+@tracer.start_as_current_span("download_image")
 def download_image(url):
     current_span = trace.get_current_span()
 
