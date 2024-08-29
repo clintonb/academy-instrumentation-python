@@ -19,6 +19,7 @@ async function fetchPicture() {
         document.getElementById('message').style = "display:block";
 
         const response = await fetch('/backend/createPicture', {
+            signal: AbortSignal.timeout(5000),
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

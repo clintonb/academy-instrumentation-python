@@ -2,7 +2,7 @@ import requests
 
 SERVICES = {
     'image-picker': 'http://image-picker:10116/imageUrl',
-    'meminator': 'http://meminator:10117/applyPhraseToPicture', 
+    'meminator': 'http://meminator:10117/applyPhraseToPicture',
     'phrase-picker': 'http://phrase-picker:10118/phrase',
 }
 
@@ -19,9 +19,9 @@ def fetch_from_service(service, method='GET', body=None):
     try:
         url = SERVICES[service] # what happens if it is not there?
         if method == 'GET':
-            response = requests.get(url)
+            response = requests.get(url, timeout=5)
         elif method == 'POST':
-            response = requests.post(url, json=body)
+            response = requests.post(url, json=body, timeout=5)
         else:
             print(f"Method {method} not supported")
         response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
